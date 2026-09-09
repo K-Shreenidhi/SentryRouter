@@ -1,8 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi import Header
+from contextlib import asynccontextmanager
+import redis.asyncio as redis
 from app.providers.mock_provider import MockProvider
+from app.core.rate_limiter import TokenBucketLimiter
+from app.core.config import settings
 
-app = FastAPI(title="SentryRouter")
+limiter: TokenBucketLimiter | None = None
+redis_client: redis.Redis | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global redis_client, limiter
+    redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+    limiter = TokenBucketLimiter(redis_client, capacity=10, refill_rate=1.0)  # 10 tokens, refills 1/sec
+    yield
+    await redis_client.close()
+
+
+app = FastAPI(title="SentryRouter", lifespan=lifespan)
 mock_provider = MockProvider()
 
 
@@ -28,7 +46,11 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 @app.post("/v1/chat/completions")
-async def chat_completions(req: ChatRequest):
+async def chat_completions(req: ChatRequest, x_api_key: str = Header(default="anonymous")):
+    allowed = await limiter.allow(key=x_api_key, cost=1)
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
     result = await mock_provider.complete([m.model_dump() for m in req.messages])
     return result
 
