@@ -11,6 +11,10 @@ from app.core.rate_limiter import TokenBucketLimiter
 from app.core.config import settings
 from app.core.idempotency import IdempotencyStore
 from app.core.singleflight import SingleFlight
+from app.core import metrics
+import time
+from prometheus_client import make_asgi_app
+
 
 limiter: TokenBucketLimiter | None = None
 redis_client: redis.Redis | None = None
@@ -31,7 +35,6 @@ router = ProviderRouter(providers=[(provider_a, breaker_a), (provider_b, breaker
 
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_client, limiter, idempotency_store, singleflight
@@ -45,6 +48,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SentryRouter", lifespan=lifespan)
 mock_provider = MockProvider()
+
+
+from app.core.metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY, RATE_LIMIT_REJECTIONS,
+    CACHE_HITS, CACHE_MISSES, BREAKER_STATE,
+)
+
+app.mount("/metrics", make_asgi_app())
+
+_STATE_TO_INT = {"closed": 0, "half_open": 1, "open": 2}
 
 
 @app.get("/")
@@ -75,13 +88,21 @@ async def chat_completions(
     x_api_key: str = Header(default="anonymous"),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
+    start = time.time()
+
     if idempotency_key:
         cached = await idempotency_store.get(idempotency_key)
         if cached:
+            CACHE_HITS.inc()
+            REQUEST_COUNT.labels(status="200_idempotent").inc()
+            REQUEST_LATENCY.observe(time.time() - start)
             return cached
 
     allowed = await limiter.allow(key=x_api_key, cost=1)
     if not allowed:
+        RATE_LIMIT_REJECTIONS.inc()
+        REQUEST_COUNT.labels(status="429").inc()
+        REQUEST_LATENCY.observe(time.time() - start)
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     async def call_router():
@@ -92,13 +113,22 @@ async def chat_completions(
 
     if req.temperature == 0.0:
         payload = {"messages": [m.model_dump() for m in req.messages], "temperature": 0.0}
+        cache_key = f"cache:{singleflight._key(payload)}"
+        pre_cached = await redis_client.get(cache_key)
+        (CACHE_HITS if pre_cached else CACHE_MISSES).inc()
         result = await singleflight.get_or_compute(payload, call_router)
     else:
+        CACHE_MISSES.inc()
         result = await call_router()
+
+    BREAKER_STATE.labels(provider="provider-a").set(_STATE_TO_INT[breaker_a.state.value])
+    BREAKER_STATE.labels(provider="provider-b").set(_STATE_TO_INT[breaker_b.state.value])
 
     if idempotency_key:
         await idempotency_store.set(idempotency_key, result)
 
+    REQUEST_COUNT.labels(status="200").inc()
+    REQUEST_LATENCY.observe(time.time() - start)
     return result
 
 # Debug-only controls — remove or gate these before anything resembling production

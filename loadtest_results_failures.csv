@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,/v1/chat/completions,HTTPError('429 Client Error: Too Many Requests for url: /v1/chat/completions'),17708,2026-09-30T10:36:08Z,2026-09-30T10:37:07Z
