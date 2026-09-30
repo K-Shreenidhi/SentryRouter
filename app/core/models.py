@@ -70,3 +70,7 @@ class HealthStatus(BaseModel):
     version: str = "0.1.0"
     postgres: str = "unknown"
     redis: str = "unknown"
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    temperature: float = 0.0
