@@ -15,3 +15,8 @@ brag-output/work/node_modules/
 brag-output/work/video_noaudio.mp4
 brag-output/work/music.wav
 brag-output/work/stills/
+
+# Agent skills & tooling
+.agents/
+skills-lock.json
+
