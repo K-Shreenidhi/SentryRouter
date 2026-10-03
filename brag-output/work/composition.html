@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SentryRouter — launch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=block" rel="stylesheet">
+<style>
+  :root{
+    --bg:#060a13; --green:#3ef0a0; --amber:#ffb547; --red:#ff4d5e; --cyan:#5cc8ff;
+    --text:#e9eefb; --muted:#8190ad; --card:rgba(14,21,38,.88); --line:rgba(130,160,215,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+  #stage{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'Space Grotesk',sans-serif;color:var(--text)}
+  #bg{position:absolute;inset:-80px;
+    background:
+      radial-gradient(900px 600px at 20% 15%, rgba(92,200,255,.10), transparent 60%),
+      radial-gradient(900px 700px at 85% 90%, rgba(62,240,160,.08), transparent 60%),
+      linear-gradient(rgba(130,160,215,.06) 1px, transparent 1px) 0 0/80px 80px,
+      linear-gradient(90deg, rgba(130,160,215,.06) 1px, transparent 1px) 0 0/80px 80px;}
+  #vig{position:absolute;inset:0;background:radial-gradient(1200px 800px at 50% 50%, transparent 55%, rgba(0,0,0,.55));z-index:5;pointer-events:none}
+  #fx{position:absolute;inset:0;z-index:1}
+  .scene{position:absolute;inset:0;opacity:0;z-index:2;transform-origin:50% 50%}
+  .node{position:absolute;transform:translate(-50%,-50%);border-radius:22px;background:var(--card);
+    border:2px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:8px;text-align:center}
+  .node .t{font-size:34px;font-weight:600;letter-spacing:-.01em}
+  .node .s{font-family:'JetBrains Mono',monospace;font-size:19px;color:var(--muted)}
+  .chip{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;padding:5px 14px;border-radius:999px;letter-spacing:.06em}
+  .ok{color:var(--green);background:rgba(62,240,160,.12);border:1.5px solid rgba(62,240,160,.45)}
+  .bad{color:var(--red);background:rgba(255,77,94,.14);border:1.5px solid rgba(255,77,94,.55)}
+  .h{position:absolute;left:0;right:0;text-align:center;font-weight:700;letter-spacing:-.025em;line-height:1.05}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wm{font-size:150px;font-weight:700;letter-spacing:-.045em;
+    background:linear-gradient(100deg,#eafff6 0%,var(--green) 40%,var(--cyan) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .mask{overflow:hidden;display:inline-block;padding:0 10px 18px}
+  .term{position:absolute;left:50%;transform:translateX(-50%);width:1240px;border-radius:16px;background:rgba(5,9,18,.92);
+    border:1.5px solid var(--line);padding:22px 30px;font-family:'JetBrains Mono',monospace;font-size:24px;line-height:1.6}
+  .pill{position:absolute;width:100px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;border:1.5px solid var(--line);background:rgba(20,30,52,.9);color:var(--muted)}
+  .card{position:absolute;transform:translate(-50%,-50%);width:660px;height:400px;border-radius:28px;background:var(--card);
+    border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .big{font-size:150px;font-weight:700;letter-spacing:-.04em;line-height:1}
+  .lab{font-size:40px;font-weight:600}
+  .foot{font-family:'JetBrains Mono',monospace;font-size:24px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+
+  <!-- 1 HOOK -->
+  <section class="scene" id="s1">
+    <div class="h" id="s1h1" style="top:170px;font-size:92px">One LLM provider.</div>
+    <div class="h" id="s1h2" style="top:285px;font-size:92px;color:var(--red)">One point of failure.</div>
+    <div class="node" id="s1app" style="left:380px;top:690px;width:250px;height:130px"><div class="t">Your app</div><div class="s">POST /v1/chat</div></div>
+    <div class="node" id="s1prov" style="left:1500px;top:690px;width:330px;height:160px"><div class="t">LLM provider</div><div class="chip ok" id="s1chip">200 OK</div></div>
+  </section>
+
+  <!-- 2 REVEAL -->
+  <section class="scene" id="s2">
+    <div class="h" style="top:225px"><span class="mask"><span class="wm" id="s2wm" style="display:inline-block">SentryRouter</span></span></div>
+    <div class="h" id="s2tag" style="top:430px;font-size:50px;font-weight:500;color:#c9d3ea">A multi-provider LLM gateway, built from scratch.</div>
+    <div class="node" id="s2app" style="left:400px;top:770px;width:220px;height:100px"><div class="t" style="font-size:30px">Your app</div></div>
+    <div class="node" id="s2gw" style="left:960px;top:770px;width:340px;height:120px;border-color:rgba(62,240,160,.6)"><div class="t">SentryRouter</div><div class="s">gateway</div></div>
+    <div class="node" id="s2a" style="left:1520px;top:690px;width:250px;height:84px"><div class="t" style="font-size:28px">provider-a</div></div>
+    <div class="node" id="s2b" style="left:1520px;top:850px;width:250px;height:84px"><div class="t" style="font-size:28px">provider-b</div></div>
+  </section>
+
+  <!-- 3 FAILOVER -->
+  <section class="scene" id="s3">
+    <div class="h" style="top:140px;font-size:72px">
+      <span id="s3w1" style="display:inline-block;color:var(--red)">Provider fails.</span>
+      <span id="s3w2" style="display:inline-block;color:var(--amber)">&nbsp;Breaker opens.</span>
+      <span id="s3w3" style="display:inline-block;color:var(--green)">&nbsp;Traffic moves.</span>
+    </div>
+    <div class="node" id="s3app" style="left:280px;top:540px;width:220px;height:110px"><div class="t" style="font-size:30px">Your app</div></div>
+    <div class="node" id="s3gw" style="left:790px;top:540px;width:330px;height:130px;border-color:rgba(62,240,160,.6)"><div class="t">SentryRouter</div><div class="s">circuit-breaker router</div></div>
+    <div class="node" id="s3a" style="left:1460px;top:400px;width:400px;height:150px">
+      <div class="t">provider-a</div>
+      <div style="display:flex;gap:14px;align-items:center"><span class="chip ok" id="s3achip">CLOSED</span><span class="s" id="s3afail">failures 0/3</span></div>
+    </div>
+    <div class="node" id="s3b" style="left:1460px;top:680px;width:400px;height:150px">
+      <div class="t">provider-b</div>
+      <div style="display:flex;gap:14px;align-items:center"><span class="chip ok">CLOSED</span><span class="s">failures 0/3</span></div>
+    </div>
+    <div class="term" id="s3term" style="top:820px">
+      <div id="s3l1" style="color:var(--muted)"></div>
+      <div id="s3l2" style="color:var(--green)">PASSED: failover held. Providers used: ['provider-b', 'provider-b', …]</div>
+      <div id="s3l3" style="color:var(--green)">PASSED: provider-a breaker correctly opened</div>
+    </div>
+  </section>
+
+  <!-- 4 RATE LIMIT -->
+  <section class="scene" id="s4">
+    <div class="h" id="s4h" style="top:140px;font-size:72px">50 concurrent requests. <span style="color:var(--cyan)">One 10-token bucket.</span></div>
+    <div class="node" id="s4bucket" style="left:470px;top:560px;width:300px;height:430px;justify-content:flex-start;padding-top:26px;gap:18px">
+      <div class="s">ratelimit:client</div>
+      <div id="s4tokens" style="display:grid;grid-template-columns:repeat(2,64px);gap:16px"></div>
+      <div class="mono" id="s4count" style="font-size:26px;font-weight:700;color:var(--cyan)">tokens 10</div>
+    </div>
+    <div id="s4grid"></div>
+    <div class="h mono" id="s4res" style="top:830px;font-size:40px;font-weight:700">
+      <span style="color:var(--green)">Allowed: 10</span><span style="color:var(--muted)">, </span><span style="color:var(--red)">Blocked: 40</span><span style="color:var(--muted)">, Total: 50</span>
+    </div>
+    <div class="h" id="s4sub" style="top:910px;font-size:44px;font-weight:500;color:#c9d3ea">Atomic Redis Lua. No race window.</div>
+  </section>
+
+  <!-- 5 SINGLEFLIGHT -->
+  <section class="scene" id="s5">
+    <div class="h" id="s5h" style="top:140px;font-size:80px">20 identical requests <span style="color:var(--cyan)">→</span> <span style="color:var(--green)">1 call.</span></div>
+    <div class="node" id="s5gw" style="left:930px;top:600px;width:340px;height:130px;border-color:rgba(92,200,255,.6)"><div class="t">singleflight</div><div class="s">Redis lock + cache</div></div>
+    <div class="node" id="s5prov" style="left:1540px;top:600px;width:340px;height:150px"><div class="t">provider-a</div><div class="mono" id="s5calls" style="font-size:24px;font-weight:700;color:var(--green)">provider calls: 0</div></div>
+  </section>
+
+  <!-- 6 PROOF -->
+  <section class="scene" id="s6">
+    <div class="h mono" id="s6h" style="top:150px;font-size:30px;letter-spacing:.3em;color:var(--muted);font-weight:600">LOAD-TESTED WITH LOCUST</div>
+    <div class="card" id="s6c1" style="left:600px;top:540px;border-color:rgba(62,240,160,.45)">
+      <div class="big" id="s6n1">0</div>
+      <div class="lab" style="color:var(--green)">requests, 0 failures</div>
+      <div class="foot">sustained load · P99 14 ms</div>
+    </div>
+    <div class="card" id="s6c2" style="left:1320px;top:540px;border-color:rgba(255,181,71,.45)">
+      <div class="big" id="s6n2">0</div>
+      <div class="lab" style="color:var(--amber)">requests in an overload run</div>
+      <div class="foot">64% rate-limited · P99 12 ms</div>
+    </div>
+    <div class="h mono" id="s6f" style="top:880px;font-size:22px;color:#5d6a86">loadtest_results/ · mock providers</div>
+  </section>
+
+  <!-- 7 OUTRO -->
+  <section class="scene" id="s7">
+    <div class="h" style="top:255px"><span class="mask"><span class="wm" id="s7wm" style="display:inline-block">SentryRouter</span></span></div>
+    <div class="h" id="s7tag" style="top:470px;font-size:56px;font-weight:600">Rate limiting · Failover · Dedup</div>
+    <div class="h" id="s7sub" style="top:550px;font-size:40px;font-weight:500;color:var(--muted)">Hand-built. Load-tested.</div>
+    <div class="h" id="s7url" style="top:700px">
+      <span class="mono" style="display:inline-block;font-size:32px;padding:16px 30px;border-radius:999px;border:1.5px solid rgba(62,240,160,.5);background:rgba(62,240,160,.08);color:var(--text)">github.com/K-Shreenidhi/SentryRouter</span>
+    </div>
+  </section>
+
+  <div id="vig"></div>
+</div>
+
+<script>
+const C={green:'#3ef0a0',amber:'#ffb547',red:'#ff4d5e',cyan:'#5cc8ff',text:'#e9eefb',muted:'#8190ad'};
+const $=id=>document.getElementById(id);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const P=(t,a,b)=>clamp((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3);
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const eback=x=>{const c1=1.4,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const rnd=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+const lerp=(a,b,u)=>a+(b-a)*u;
+
+// Scene windows (bar-aligned at 120 BPM: downbeats at 0.5 + 2k)
+const S={s1:[0,2.5],s2:[2.5,6.5],s3:[6.5,10.5],s4:[10.5,14.5],s5:[14.5,16.5],s6:[16.5,20.5],s7:[20.5,23]};
+const DURATION=23;
+
+function sceneAlpha(t,[a,b],first,last){
+  const i= first?1:eo(P(t,a+0.02,a+0.3));
+  const o= last?1:1-P(t,b-0.22,b-0.02);
+  return Math.min(i,o);
+}
+// base transforms per element
+function show(el,t,tin,{dur=.5,dy=26,scale=0,base=''}={}){
+  const u=eo(P(t,tin,tin+dur));
+  el.style.opacity=u;
+  const sc=scale?lerp(1-scale,1,eback(P(t,tin,tin+dur))):1;
+  el.style.transform=`${base} translateY(${(1-u)*dy}px) scale(${sc})`;
+  return u;
+}
+const NODE='translate(-50%,-50%)';
+
+// ---- canvas helpers ----
+const cv=$('fx'),ctx=cv.getContext('2d');
+function bez(p0,p1,u){ // horizontal-tangent cubic
+  const mx=(p1[0]-p0[0])*0.5;
+  const c0=[p0[0]+mx,p0[1]],c1=[p1[0]-mx,p1[1]];
+  const v=1-u;
+  return [v*v*v*p0[0]+3*v*v*u*c0[0]+3*v*u*u*c1[0]+u*u*u*p1[0],
+          v*v*v*p0[1]+3*v*v*u*c0[1]+3*v*u*u*c1[1]+u*u*u*p1[1]];
+}
+function track(p0,p1,alpha,color='rgba(130,160,215,1)',dash=null,width=3){
+  ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;
+  if(dash)ctx.setLineDash(dash);
+  ctx.beginPath();for(let i=0;i<=40;i++){const q=bez(p0,p1,i/40);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}ctx.stroke();ctx.restore();
+}
+function dot(x,y,r,color,a=1){
+  ctx.save();ctx.globalAlpha*=a;
+  const g=ctx.createRadialGradient(x,y,0,x,y,r*3.2);g.addColorStop(0,color);g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.globalAlpha*=.45;ctx.beginPath();ctx.arc(x,y,r*3.2,0,7);ctx.fill();
+  ctx.globalAlpha/=.45;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.restore();
+}
+// stream of dots: spawned at k/rate in [s0,s1), travel seconds
+function stream(t,p0,p1,s0,s1,rate,travel,colorFn,seed=0,opts={}){
+  const k0=Math.ceil(s0*rate),k1=Math.floor((s1-1e-6)*rate);
+  for(let k=k0;k<=k1;k++){
+    const sp=k/rate+ (rnd(k+seed)-.5)*0.04;
+    const u=(t-sp)/travel;
+    if(u<0)continue;
+    const res=colorFn(sp,k);
+    if(res.bounce){
+      if(u<=1){const q=bez(p0,p1,u);dot(q[0],q[1],7,res.c);}
+      else{const b=(u-1)*travel; if(b<0.45){const q=bez(p0,p1,1-b*0.5);dot(q[0],q[1]+b*60*(rnd(k+seed+9)-.5)*4,7,C.red,1-b/0.45);}}
+      continue;
+    }
+    if(u>1)continue;
+    const q=bez(p0,p1,u);dot(q[0],q[1],7,res.c, opts.fadeEnd? clamp((1-u)*6):1);
+  }
+}
+function floatText(txt,x,y,t,t0,color,size=26){
+  const u=(t-t0)/0.8;if(u<0||u>1)return;
+  ctx.save();ctx.globalAlpha*=Math.sin(Math.PI*clamp(u*1.4));ctx.fillStyle=color;
+  ctx.font=`700 ${size}px "JetBrains Mono"`;ctx.textAlign='center';ctx.fillText(txt,x,y-u*50);ctx.restore();
+}
+
+// ---- rate-limit grid ----
+const grid=$('s4grid'),pills=[],tokens=[];
+for(let i=0;i<10;i++){const d=document.createElement('div');d.style.cssText='width:64px;height:40px;border-radius:12px;background:rgba(92,200,255,.18);border:2px solid rgba(92,200,255,.7)';$('s4tokens').appendChild(d);tokens.push(d);}
+const GX0=700,GY0=380,PW=100,PH=56,GAP=16;
+for(let i=0;i<50;i++){const d=document.createElement('div');d.className='pill';d.textContent='POST';
+  const c=i%10,r=Math.floor(i/10);d.style.left=(GX0+c*(PW+GAP))+'px';d.style.top=(GY0+r*(PH+GAP))+'px';grid.appendChild(d);pills.push(d);}
+// deterministic resolution order (shared with synth.js)
+const order=[...Array(50).keys()].sort((a,b)=>rnd(a+500)-rnd(b+500));
+const rank=[];order.forEach((p,r)=>rank[p]=r);
+const RL_T0=11.5,RL_STEP=0.024;
+
+// ---- render ----
+function render(t){
+  ctx.clearRect(0,0,1920,1080);
+  $('bg').style.transform=`translate(${-t*6}px,${-t*3}px)`;
+  const names=Object.keys(S);
+  names.forEach((n,i)=>{
+    const a=sceneAlpha(t,S[n],i===0,i===names.length-1);
+    const el=$(n);el.style.opacity=a;
+    const [s0]=S[n];const z=1+0.035*(1-eo(P(t,s0,s0+0.9)));
+    el.style.transform=`scale(${z})`;
+    el.style.visibility=a>0.001?'visible':'hidden';
+    if(a>0.001){ctx.save();ctx.globalAlpha=a;ctx.translate(960,540);ctx.scale(z,z);ctx.translate(-960,-540);SCN[n](t);ctx.restore();}
+  });
+  // final fade to black
+  $('stage').style.filter=`brightness(${1-P(t,22.55,23)})`;
+}
+
+const FAIL1=1.0;
+const SCN={
+  s1(t){
+    show($('s1h1'),t,0.0,{dur:.35});
+    show($('s1h2'),t,1.05,{dur:.4});
+    show($('s1app'),t,0,{dur:.3,base:NODE});
+    const shake=t>FAIL1?Math.sin((t-FAIL1)*70)*14*Math.exp(-(t-FAIL1)*7):0;
+    show($('s1prov'),t,0,{dur:.3,base:NODE+` translateX(${shake}px)`});
+    const failed=t>=FAIL1;
+    const pv=$('s1prov');pv.style.borderColor=failed?'rgba(255,77,94,.85)':'';
+    pv.style.boxShadow=failed?`0 0 ${60+30*Math.exp(-(t-FAIL1)*4)}px rgba(255,77,94,${.25+.35*Math.exp(-(t-FAIL1)*4)})`:'';
+    const chip=$('s1chip');chip.className='chip '+(failed?'bad':'ok');chip.textContent=failed?'503 DOWN':'200 OK';
+    const p0=[505,690],p1=[1335,690];
+    track(p0,p1,.35);
+    stream(t,p0,p1,-1,2.5,9,0.7,(sp)=>({c:(sp+0.7>FAIL1)?C.red:C.green,bounce:sp+0.7>FAIL1}),1);
+    // 503 pops
+    for(let k=Math.ceil(0.35*9);k<2.5*9;k+=2){const ta=k/9+0.7;if(ta<FAIL1)continue;
+      const side=Math.floor(k/2)%2?-1:1;
+      floatText('503',1290-rnd(k)*120,690+side*(70+rnd(k+3)*60),t,ta,C.red,26);}
+  },
+  s2(t){
+    const u=eo(P(t,2.65,3.25));$('s2wm').style.transform=`translateY(${(1-u)*110}%)`;
+    show($('s2tag'),t,3.15,{dur:.5});
+    ['s2app','s2gw','s2a','s2b'].forEach((id,i)=>show($(id),t,3.55+i*0.12,{dur:.45,base:NODE,scale:.12,dy:0}));
+    const al=P(t,3.7,4.1);
+    const app=[510,770],gw0=[790,770],gw1=[1130,770],A=[1395,690],B=[1395,850];
+    ctx.save();ctx.globalAlpha*=al;
+    track(app,gw0,.35);track(gw1,A,.35);track(gw1,B,.35);
+    stream(t,app,gw0,3.6,7,8,0.55,()=>({c:C.green}),20);
+    stream(t,gw1,A,4.1,7,4,0.5,()=>({c:C.green}),30);
+    stream(t,gw1,B,4.2,7,4,0.5,()=>({c:C.green}),40);
+    ctx.restore();
+  },
+  s3(t){
+    show($('s3w1'),t,6.75,{dur:.4});show($('s3w2'),t,7.75,{dur:.4});show($('s3w3'),t,8.2,{dur:.4});
+    ['s3app','s3gw','s3a','s3b'].forEach(id=>show($(id),t,6.55,{dur:.4,base:NODE,dy:0}));
+    const F=[7.2,7.45,7.7],OPEN=7.75;
+    const nf=F.filter(x=>t>=x).length;
+    const open=t>=OPEN;
+    const lastF=F.filter(x=>t>=x).pop();
+    const flash=lastF?Math.exp(-(t-lastF)*6):0;
+    const a=$('s3a');
+    const shake=lastF?Math.sin((t-lastF)*70)*10*Math.exp(-(t-lastF)*8):0;
+    a.style.transform=NODE+` translateX(${shake}px)`;
+    a.style.borderColor=(nf>0)?'rgba(255,77,94,.85)':'';
+    a.style.boxShadow=nf>0?`0 0 ${50+40*flash}px rgba(255,77,94,${.2+.4*flash})`:'';
+    a.style.opacity=open?lerp(1,.55,P(t,OPEN+.3,OPEN+.8)):1;
+    const chip=$('s3achip');chip.className='chip '+(open?'bad':'ok');chip.textContent=open?'OPEN':'CLOSED';
+    chip.style.transform=`scale(${open?1+0.25*Math.exp(-(t-OPEN)*8):1})`;
+    $('s3afail').textContent=`failures ${nf}/3`;$('s3afail').style.color=nf?C.red:'';
+    const b=$('s3b');const bon=P(t,OPEN,OPEN+.3);
+    b.style.borderColor=t>7.2?`rgba(62,240,160,${.4+.4*bon})`:'';
+    b.style.boxShadow=t>7.2?`0 0 ${40+30*bon}px rgba(62,240,160,${.12+.18*bon})`:'';
+
+    const app=[390,540],gw0=[625,540],gw1=[955,540],A=[1260,400],B=[1260,680];
+    track(app,gw0,.35);
+    track(gw1,A,open?.15:.35,open?C.red:undefined,open?[10,12]:null);
+    track(gw1,B,.35);
+    stream(t,app,gw0,5.8,11,9,0.5,()=>({c:C.green}),50);
+    // to A: until OPEN; those arriving after first failure bounce
+    stream(t,gw1,A,6.2,OPEN-0.45,9,0.45,(sp)=>({c:sp+0.45>=7.2?C.red:C.green,bounce:sp+0.45>=7.2}),60);
+    // per-request failover to B during failing window, then direct
+    stream(t,gw1,B,7.25,11,9,0.45,()=>({c:C.green}),70);
+    // terminal
+    show($('s3term'),t,8.35,{dur:.35,base:'translateX(-50%)',dy:20});
+    const cmd='$ python tests/test_failover_chaos.py';
+    const n=Math.floor(clamp((t-8.45)/0.4)*cmd.length);$('s3l1').textContent=cmd.slice(0,n)+(t>8.4&&t<9.0&&Math.floor(t*6)%2?'▍':'');
+    $('s3l2').style.opacity=t>=8.95?1:0;$('s3l3').style.opacity=t>=9.2?1:0;
+  },
+  s4(t){
+    show($('s4h'),t,10.6,{dur:.45});
+    show($('s4bucket'),t,10.6,{dur:.45,base:NODE,dy:0,scale:.1});
+    let allowed=0;
+    pills.forEach((d,i)=>{
+      const tin=10.85+(i%10)*0.03+Math.floor(i/10)*0.05;
+      const u=eo(P(t,tin,tin+.3));
+      const tr=RL_T0+rank[i]*RL_STEP;const done=t>=tr;
+      const ok=rank[i]<10;
+      if(done&&ok)allowed++;
+      const pop=done?1+0.18*Math.exp(-(t-tr)*12):1;
+      d.style.opacity=u*(done&&!ok?lerp(1,.75,P(t,tr+.2,tr+.6)):1);
+      d.style.transform=`translateX(${(1-u)*80}px) scale(${pop})`;
+      if(done){d.textContent=ok?'200':'429';d.style.color=ok?C.green:C.red;
+        d.style.borderColor=ok?'rgba(62,240,160,.7)':'rgba(255,77,94,.5)';d.style.background=ok?'rgba(62,240,160,.14)':'rgba(255,77,94,.10)';
+        d.style.boxShadow=ok?`0 0 ${20+30*Math.exp(-(t-tr)*6)}px rgba(62,240,160,.35)`:'none';}
+      else{d.textContent='POST';d.style.color='';d.style.borderColor='';d.style.background='';d.style.boxShadow='none';}
+    });
+    tokens.forEach((tk,i)=>{const gone=i>=10-allowed;tk.style.opacity=gone?.15:1;tk.style.transform=`scale(${gone?.8:1})`;});
+    $('s4count').textContent=`tokens ${10-allowed}`;$('s4count').style.color=allowed===10?C.red:C.cyan;
+    show($('s4res'),t,12.8,{dur:.4});
+    show($('s4sub'),t,12.95,{dur:.45});
+  },
+  s5(t){
+    show($('s5h'),t,14.5,{dur:.35});
+    show($('s5gw'),t,14.55,{dur:.35,base:NODE,dy:0});show($('s5prov'),t,14.55,{dur:.35,base:NODE,dy:0});
+    const gw0=[760,600],gw1=[1100,600],pv=[1370,600];
+    track(gw1,pv,.35);
+    for(let i=0;i<20;i++){
+      const y=lerp(330,870,i/19),x0=230+rnd(i+80)*60;
+      const st=[x0,y];
+      track(st,gw0,.12);
+      // inbound
+      const ti=14.7+rnd(i+90)*0.12;const u=eio(P(t,ti,ti+0.45));
+      if(t>=ti&&u<1){const q=bez(st,gw0,u);dot(q[0],q[1],6,C.cyan);}
+      // outbound fan
+      const to=15.75+rnd(i+95)*0.08;const v=eio(P(t,to,to+0.4));
+      if(t>=to){const q=bez(gw0,st,v);dot(q[0],q[1],6,C.green,v>=1?lerp(1,.6,P(t,to+.4,to+.8)):1);}
+      if(t<ti)dot(st[0],st[1],6,C.cyan,.9);
+    }
+    // single call to provider & back
+    const u1=eio(P(t,15.2,15.5));if(t>=15.2&&t<15.5){const q=bez(gw1,pv,u1);dot(q[0],q[1],10,C.cyan);}
+    const u2=eio(P(t,15.5,15.75));if(t>=15.5&&t<15.75){const q=bez(pv,gw1,u2);dot(q[0],q[1],10,C.green);}
+    const c=$('s5calls');c.textContent=`provider calls: ${t>=15.5?1:0}`;
+    c.style.transform=`scale(${t>=15.5?1+0.3*Math.exp(-(t-15.5)*8):1})`;
+    const g=$('s5gw');const lock=t>=15.0&&t<15.8;g.style.boxShadow=lock?'0 0 70px rgba(92,200,255,.35)':'';
+  },
+  s6(t){
+    show($('s6h'),t,16.55,{dur:.4});
+    show($('s6c1'),t,16.65,{dur:.5,base:NODE,dy:40});
+    show($('s6c2'),t,17.15,{dur:.5,base:NODE,dy:40});
+    const n1=Math.round(3694*eo(P(t,16.7,17.3))),n2=Math.round(17858*eo(P(t,17.2,17.8)));
+    $('s6n1').textContent=n1.toLocaleString('en-US');$('s6n2').textContent=n2.toLocaleString('en-US');
+    show($('s6f'),t,17.6,{dur:.4});
+  },
+  s7(t){
+    const u=eo(P(t,20.6,21.15));$('s7wm').style.transform=`translateY(${(1-u)*110}%)`;
+    show($('s7tag'),t,21.0,{dur:.45});show($('s7sub'),t,21.25,{dur:.45});show($('s7url'),t,21.45,{dur:.45});
+  }
+};
+window.render=render;window.DURATION=DURATION;
+window.ready=Promise.all([document.fonts.ready,document.fonts.load('700 26px "JetBrains Mono"'),document.fonts.load('700 80px "Space Grotesk"')]).then(()=>true);
+const qs=new URLSearchParams(location.search);render(parseFloat(qs.get('t')||'0'));
+</script>
+</body>
+</html>

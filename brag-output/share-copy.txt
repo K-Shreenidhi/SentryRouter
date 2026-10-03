@@ -1,0 +1,8 @@
+Most LLM gateway projects wrap LiteLLM and call it a day. I built SentryRouter from scratch to actually understand and test what happens when upstream providers fail:
+
+• Atomic Redis Lua rate limiting (tested under 50 concurrent requests with zero race condition)
+• Automatic circuit-breaker failover with timeout-aware provider isolation
+• Singleflight request deduplication collapsing concurrent identical queries
+• Sustained load-tested at ~67 req/s with P99 gateway overhead under 14ms
+
+Source and benchmarks: https://github.com/K-Shreenidhi/SentryRouter
