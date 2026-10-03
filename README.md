@@ -2,7 +2,7 @@
 
 **A multi-provider LLM inference gateway, built from scratch to solve the reliability problems every team hits once LLM calls move from a prototype to production traffic.**
 
-Not a wrapper around an existing library. The rate limiter, circuit breaker, and request deduplication logic are hand-built and load-tested — this repo exists to demonstrate that engineering, not to hide it behind a framework.
+Not a wrapper around an existing library. The rate limiter, circuit breaker, and request deduplication logic are hand-built and load-tested - this repo exists to demonstrate that engineering, not to hide it behind a framework.
 
 ---
 
@@ -25,7 +25,7 @@ Most "LLM gateway" portfolio projects call `LiteLLM` or a similar library and st
 
 | Claim | Proof |
 |---|---|
-| Rate limiter has no race condition | Atomic Redis Lua script, verified with 50 truly concurrent requests against a 10-token bucket — exactly 10 pass, every run |
+| Rate limiter has no race condition | Atomic Redis Lua script, verified with 50 truly concurrent requests against a 10-token bucket - exactly 10 pass, every run |
 | Failover is transparent to the client | Automated chaos test trips a provider mid-request and asserts zero client-visible errors |
 | Dedup actually collapses duplicate calls | 20 concurrent identical requests verified to hit the upstream provider exactly once |
 | Gateway overhead is known, not guessed | Load-tested: **P50 3ms / P95 5ms / P99 13ms** gateway-added latency at ~67 req/s sustained, 0 failures across 3,703 requests |
@@ -57,7 +57,7 @@ Circuit-Breaker Router  ── CLOSED → OPEN → HALF_OPEN per provider
 Postgres  ── async request log, cost & latency tracking
 ```
 
-Every request is checked for rate limit and cache hit before a provider is ever called. If the selected provider's breaker is `OPEN`, it's skipped — no wasted call to something already known to be down.
+Every request is checked for rate limit and cache hit before a provider is ever called. If the selected provider's breaker is `OPEN`, it's skipped - no wasted call to something already known to be down.
 
 ---
 
@@ -112,4 +112,4 @@ All three run in CI on every push — see [`.github/workflows/test.yml`](./.gith
 
 ## What this deliberately doesn't include
 
-No auth system beyond a static API key check, no billing UI, no Kubernetes, no more than three providers. The scope is the reliability primitives — rate limiting, failover, dedup — proven under load, not a full commercial product surface.
+No auth system beyond a static API key check, no billing UI, no Kubernetes, no more than three providers. The scope is the reliability primitives - rate limiting, failover, dedup - proven under load, not a full commercial product surface.
