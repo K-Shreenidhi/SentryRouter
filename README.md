@@ -108,7 +108,8 @@ python tests/test_failover_chaos.py           # proves failover is transparent u
 All three run in CI on every push — see [`.github/workflows/test.yml`](./.github/workflows/test.yml).
 
 
-
+## Demo
+https://github.com/user-attachments/assets/3d75d70e-bab7-442c-9d89-e8ca0464baca
 
 ## What this deliberately doesn't include
 
